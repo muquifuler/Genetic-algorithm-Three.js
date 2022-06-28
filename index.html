@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>My first three.js app</title>
+		<style>
+			* { margin: 0; }
+            #btnGen { position: absolute; }
+            #time {
+                position: absolute;
+                font-weight: 600;
+                font-size: 2vh;
+                margin-left: 25%;
+                color: rgb(0, 255, 21);
+            }
+            #food {
+                position: absolute;
+                font-weight: 600;
+                font-size: 2vh;
+                margin-left: 20%;
+                color: rgb(255, 0, 0);
+            }
+            #IA{
+                position: absolute;
+                font-weight: 600;
+                font-size: 2vh;
+                margin-left: 32%;
+                color: rgb(0, 4, 255);
+            }
+            #stats{
+                position: absolute;
+                font-weight: 600;
+                font-size: 2vh;
+                margin-left: 40%;
+                color: rgb(255, 0, 242);
+            }
+            #statsGeneral{
+                position: absolute;
+                margin-top: 2vh;
+            }
+            #statsGeneral span{
+                display: block;
+                margin-top: 10%;
+                font-weight: 600;
+                font-size: 2vh;
+                color: rgb(0, 255, 242);
+                margin-top: 1vh;
+                margin-bottom: 1vh;
+            }
+            #btnGen100{
+                position: absolute;
+                margin-left: 10%;
+            }
+		</style>
+	</head>
+	<body>
+        <button id="btnGen" onclick="algoritmoGenetico()">Evolucionar a generación 1</button>
+        <button id="btnGen100" onclick="generateSimulation()">Avanzar 100 generaciones</button>
+        <span id="time"></span>
+        <span id="IA">IA: 10</span>
+        <span id="stats"></span>
+        <div id="statsGeneral">
+            <span>First generation:</span>
+        </div>
+        <div style="display:flex ; position:fixed; bottom:0;">
+            <button>Agrandar</button>
+            <button>Disminuir</button>
+            <button onclick="moreVel()">Mas velocidad</button>
+            <button onclick="lessVel()">Menos velocidad</button>
+        </div>
+        <span id="food">Food: 0</span>
+		<script src="three.js"></script>
+		<script>
+
+            // CubeBands, conseguira tu especie aguantar 100 dias?
+            // Un juego/simulacion web que utiliza un algoritmo genetico para desarrollarse,
+            // el usuario debe ir influyendo en la tribu consiguiendo los objetivos que
+            // considere e ir asi menjorando la especie por medio de la genetica
+
+            // Primero va a ser un cubo que se come minicubos e intenta sobrevivir
+
+			// Para poder mostrar cualquier cosa con three.js, 
+            // necesitamos tres cosas: escena, cámara y renderizador
+
+            // buttons
+
+            function moreVel(){
+                for(let i=0; i<ias.length; i++){
+                    ias[i].velocidad += 0.01;
+                }
+            }
+            function lessVel(){
+                for(let i=0; i<ias.length; i++){
+                    ias[i].velocidad -= 0.01;
+                }
+            }
+            function moreBig(){
+
+            }
+            function lessBig(){
+
+            }
+
+            // Code 3d
+
+            let totalComido = 0;
+            let numGeneraciones = 1;
+            const TIME_LIMIT = 10000; // 20 segundos
+
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x211f);
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+            const renderer = new THREE.WebGLRenderer();
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+                // Una linea
+            const material = new THREE.LineBasicMaterial( { color: 0x00ff00 } );
+            const points = [];
+            points.push( new THREE.Vector3( 0, -20, -5 ) );
+            points.push( new THREE.Vector3(0, 20, -5 ) );
+
+            const geometry = new THREE.BufferGeometry().setFromPoints( points );
+            const line = new THREE.Line( geometry, material );
+            scene.add( line );
+            renderer.render( scene, camera );
+
+            // Player
+/*
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+            const cube = new THREE.Mesh(geometry, material);
+            scene.add(cube);
+
+            document.addEventListener("keydown", (event) => {
+                switch(event.keyCode){
+                    case 37://Izquierda
+                        cube.position.x -= 0.05;
+                        break;
+                    case 38://Arriba
+                        cube.position.y += 0.05;
+                        break;
+                    case 39://Derecha
+                        cube.position.x += 0.05;
+                        break;
+                    case 40://Abajo
+                        cube.position.y -= 0.05;
+                        break;
+                }
+            });
+
+*/
+            // IA
+
+            const MAX_IA = 10;
+            const MAX_MOVIMIENTOS = 600;
+            let ias = [];
+            let ia_occuped = [];
+            let velocidad = 0.10;
+
+            function generateIA(bool){
+                const geometry_ = new THREE.BoxGeometry(0.7, 0.7, 3);
+                const material_ = new THREE.MeshBasicMaterial( { color: 0x0000ff } );
+                const ia = new THREE.Mesh(geometry_, material_);
+
+                let other, randX, randY;
+
+                do{// Colocacion inicial
+
+                    other = false;
+                    randX = Math.round(Math.random()*-10-1);
+                    randY = Math.round(Math.random()*-7);
+                    if(bool % 2 == 0){
+                        randY *= -1;
+                    }
+
+                    for(let i=0; i<ia_occuped.length; i++){
+                        if(ia_occuped.x == randX && ia_occuped.y == randY){
+                            other = true;
+                        }
+                    }
+
+                }while(other);
+
+                ia_occuped.push({ x: randX, y: randY });
+
+                ia.id = bool;
+                ia.name = bool+"-IA";
+                ia.position.x = -5;// de -10 a 10
+                ia.position.y = 0;// de -7 a 7
+                
+                // caracteristicas
+
+                ia.velocidad = velocidad;
+                ia.comido = 0;
+                ia.movimientos = [];// son necesarios para que el algoritmo genetico aprenda a cambiar de opcion
+                
+                for(let j=0; j<60; j++){
+                    let numRand = Math.floor(Math.random()*4);
+                    for(let i=0; i<MAX_MOVIMIENTOS/60; i++){
+                        ia.movimientos.push(numRand);
+                    }
+                }
+
+                let vals = [0, 0, 0, 0, 0];
+                for(let i=0; i<ia.movimientos.length; i++){
+                    switch(ia.movimientos[i]){
+                        case 0: vals[0]++; break; // LEFT
+                        case 1: vals[1]++; break; // RIGHT
+                        case 2: vals[2]++; break; // TOP
+                        case 3: vals[3]++; break; // BOTTOM
+                    }
+                    vals[4]++;
+                }
+
+                crearStats(ia.name, vals[0], vals[1], vals[2], vals[3], vals[4]);
+/*
+                ia.probabilidades = {// va a ganar de momento el que descubra los ajustes aqui para barrer mejor
+                    left: Math.floor(Math.random()*10+1), 
+                    right: Math.floor(Math.random()*20+1), 
+                    top: Math.floor(Math.random()*30+1),  
+                    bottom: Math.floor(Math.random()*40+1), 
+                };
+*/
+                ias.push(ia);
+
+                return ia;
+            }
+
+            // Caracteristicas IA
+
+            function crearStats(name, izq, der, top, bot, total){
+                let span = document.createElement('span');
+                span.innerHTML = name+": 0/Izq: "+Math.round((izq*100)/total)+"% 1/Der: "+Math.round((der*100)/total)+"% 2/Top: "+Math.round((top*100)/total)+"% 3/Bot: "+Math.round((bot*100)/total)+"%";
+                document.getElementById("statsGeneral").appendChild(span);
+            }
+/*
+            function movimientoIA(ia){// Con probabilidad <- Para la primera simulación
+                let numRand = Math.floor(Math.random()*40+1);
+                if(numRand < ia.probabilidades.left){
+                    ia.position.x -= ia.velocidad;
+                    ia.movimientos.push(0);
+                }else if(numRand < ia.probabilidades.right){
+                    ia.position.x += ia.velocidad;
+                    ia.movimientos.push(1);
+                }else if(numRand < ia.probabilidades.top){
+                    ia.position.y += ia.velocidad;
+                    ia.movimientos.push(2);
+                }else if(numRand < ia.probabilidades.bottom){
+                    ia.position.y -= ia.velocidad;
+                    ia.movimientos.push(3);
+                }
+            }
+*/
+            function movimientoIA2(){// Con array de direcciones <- Elegido para algoritmo genetico
+                for(let i=0; i<ias.length; i++){// 60 movimientos por segundo
+                    switch(ias[i].movimientos[rebobinarMovimientos]){
+                        case 0: ias[i].position.x -= ias[i].velocidad; break; // left
+                        case 1: ias[i].position.x += ias[i].velocidad; break; // right
+                        case 2: ias[i].position.y += ias[i].velocidad; break; // top
+                        case 3: ias[i].position.y -= ias[i].velocidad; break; // bottom
+                    }
+                }
+            }
+
+            // Food
+
+            const FOOD = 100;
+            let comido = 0;
+            let minicubes = [];
+            let mc_occuped = [];
+            
+            function generateFood(bool){
+
+                var simbolos, color;
+                simbolos = "0123456789ABCDEF";
+                color = "#";
+
+                for(var i = 0; i < 6; i++){
+                    color = color + simbolos[Math.floor(Math.random() * 16)];
+                }
+
+                const geometry_ = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+                const material_ = new THREE.MeshBasicMaterial( { color: color } );
+                const minicube = new THREE.Mesh(geometry_, material_);
+                let other, randX, randY;
+                do{
+
+                    other = false;
+                    randX = Math.round(Math.random()*10+1);
+                    randY = Math.round(Math.random()*7);
+                    if(bool % 2 == 0){
+                        randY *= -1;
+                    }
+
+                    for(let i=0; i<mc_occuped.length; i++){
+                        if(mc_occuped.x == randX && mc_occuped.y == randY){
+                            other = true;
+                        }
+                    }
+
+                }while(other);
+                mc_occuped.push({ x: randX, y: randY });
+
+                minicube.name = bool;
+                minicube.position.x = randX;// de -10 a 10
+                minicube.position.y = randY;// de -7 a 7
+
+                minicubes.push(minicube);
+
+                return minicube;
+            }
+
+            for(let i=0; i<FOOD; i++){
+                scene.add(generateFood(i));
+            }
+
+            // Simulation
+
+            // Game
+            camera.position.z = 10;
+            let rebobinarMovimientos = 0;
+            let fecha = new Date();
+
+            function animate(){
+                for(let i=0; i<minicubes.length; i++){
+                    for(let j=0; j<ias.length; j++){
+                        if(Math.round(ias[j].position.x) == minicubes[i].position.x && Math.round(ias[j].position.y) == minicubes[i].position.y){
+                            ias[j].material.color = minicubes[i].material.color;
+                            scene.remove(minicubes[i]);
+                            ias[j].comido++;
+                            totalComido++;
+                            comido++;
+                            minicubes.splice(i, 1);
+                            document.getElementById("food").innerHTML = "Food: "+totalComido;
+                            break;
+                        }
+                    }
+                }
+                document.getElementById('time').innerHTML = Math.floor((new Date()-fecha)/1000)+" segundos";
+
+                movimientoIA2();
+
+                rebobinarMovimientos++;
+                requestAnimationFrame(animate);
+                renderer.render(scene,camera);
+            }
+            animate()
+            // Algoritmo genetico
+            let comidoMedia = [];
+            setInterval( () => {
+                console.log("Fin generación resultados: --------------")
+                console.log("Comido: "+comido+"/"+FOOD);
+                comidoMedia.push(comido)
+                let media = 0;
+                for(let i=0; i<comidoMedia.length; i++){
+                    media += comidoMedia[i];
+                }
+                console.log("Media comido de "+(numGeneraciones-1)+" generaciones: "+media/comidoMedia.length);
+                console.log("-----------------------------------------")
+                algoritmoGenetico()
+                comido = 0;
+            },TIME_LIMIT);
+
+            for(let i=0; i<MAX_IA; i++){
+                scene.add(generateIA(i));
+            }
+
+            function algoritmoGenetico(){// se reusan las ias anteriores pero seteando de nuevo su posicion y con el nuevo genoma, es decir el array de movimientos
+                fecha = new Date();
+                numGeneraciones++;
+                document.getElementById('btnGen').innerHTML = "Evolucionar a generación "+numGeneraciones;
+
+                let ias_winners = faseSeleccion();// Array con los dos mejores genomas
+                
+                faseSustitucion(ias_winners);
+
+                for(let i=0; i<ias.length; i++){
+                    ias[i].position.x = -5;
+                    ias[i].position.y = 0;
+                }
+
+                for(let i=0; i<minicubes.length; i++){
+                    scene.remove(minicubes[i]);
+                }
+
+                minicubes = [];
+                for(let i=0; i<FOOD; i++){
+                    scene.add(generateFood(i));
+                }
+
+                rebobinarMovimientos=0;
+
+                let vals = porcentajesDelMejor(ias_winners);
+                let valsTotal = vals[4];
+
+                document.getElementById("stats").innerHTML = "El mejor: 0/Izq: "+Math.round((vals[0]*100)/valsTotal)+"% 1/Der: "+Math.round((vals[1]*100)/valsTotal)+"% 2/Top: "+Math.round((vals[2]*100)/valsTotal)+"% 3/Bot: "+Math.round((vals[3]*100)/valsTotal)+"%";
+
+            }
+
+            function porcentajesDelMejor(ias_winners){
+                let vals = [0, 0, 0, 0, 0];
+                for(let i=0; i<ias_winners[0].movimientos.length; i++){
+                    switch(ias_winners[0].movimientos[i]){
+                        case 0: vals[0]++; break;
+                        case 1: vals[1]++; break;
+                        case 2: vals[2]++; break;
+                        case 3: vals[3]++; break;
+                    }
+                    vals[4]++;
+                }
+                return vals;
+            }
+
+            function faseSeleccion(){ // Seleccion de los 2 mejores // -Selección por torneo-
+                let winners = [];
+                let winnerFood = -1;
+                let winnerId;
+                for(let i=0; i<ias.length; i++){// First Winner
+                    if(ias[i].comido > winnerFood){
+                        winnerFood = ias[i].comido//Obtenemos quien gano de la generación anterior
+                        winnerId = i;
+                    }
+                }
+                console.log("Ganador 1: "+winnerId+" ha comido: "+ias[winnerId].comido);
+                winners.push(ias[winnerId]);
+
+                winnerFood = -1;
+                winnerId = 0;
+                for(let i=0; i<ias.length; i++){// Second Winner
+                    if(ias[i].comido > winnerFood && ias[i].comido != winners[0].comido){
+                        winnerFood = ias[i].comido
+                        winnerId = i;
+                    }
+                }
+                console.log("Ganador 2: "+winnerId+" ha comido: "+ias[winnerId].comido);
+                winners.push(ias[winnerId]);
+
+                return winners;
+            }
+
+            function faseCruzar(ia_movimientos){// hay que determinar un punto de corte en ambos winners[0].movimientos[puntoDeCorte] y mezclarlos
+                let numCorte = Math.round(Math.random()*MAX_MOVIMIENTOS);// Num aletorio hasta 1200
+                    // Se mezcla el genoma
+                let ia_movimientos_cruzados = [];
+
+                for(let j=numCorte; j<MAX_MOVIMIENTOS; j++){
+                    ia_movimientos_cruzados.push(ia_movimientos[j]);
+                }
+                for(let j=0; j<numCorte; j++){
+                    ia_movimientos_cruzados.push(ia_movimientos[j])
+                }
+
+                return ia_movimientos_cruzados;
+            }
+
+            function faseMutacion(ia_cruzado_movimientos){
+                const NUM_MUTACIONES = 6; // 12 == un 2% de cambio si es 600
+                for(let i=0; i<NUM_MUTACIONES; i++){
+                    let rand = Math.round(Math.random()*MAX_MOVIMIENTOS);
+                    ia_cruzado_movimientos[rand] = Math.floor(Math.random()*4);
+                }
+                return ia_cruzado_movimientos;
+            }
+
+            function faseSustitucion(ias_winners){
+
+                for(let i=0; i<MAX_IA; i+=2){
+
+                    let cruzados0 = faseCruzar(ias_winners[0].movimientos);
+                    let cruzados1 = faseCruzar(ias_winners[1].movimientos);
+
+                    let mutados0 = faseMutacion(cruzados0);
+                    let mutados1 = faseMutacion(cruzados1);
+                    
+                    ias[i].comido = 0;
+                    ias[(i+1)].comido = 0;
+
+                    ias[i].movimientos = mutados0;
+                    ias[(i+1)].movimientos = mutados1;
+
+                    ias[i].material.color = ias_winners[0].material.color;
+                    ias[(i+1)].material.color = ias_winners[1].material.color;
+                }
+
+                ias[0].movimientos = ias_winners[0].movimientos;
+                //ias[1].movimientos = ias_winners[1].movimientos;
+        
+            }
+
+            //Simulacion
+
+            function generateSimulation(){
+                for(let i=0; i<100; i++){
+                    algoritmoGenetico()
+                }
+            }
+
+		</script>
+	</body>
+</html>
